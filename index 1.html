@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SikaFarm Premium App System</title>
+    <style>
+        :root {
+            --primary: #1b5e20;
+            --primary-light: #e8f5e9;
+            --accent: #4caf50;
+            --dark: #2c3e50;
+            --light: #ffffff;
+            --warning-bg: #ffebee;
+            --warning-text: #c62828;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --radius: 12px;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: #f4f7f5;
+            color: var(--dark);
+            margin: 0;
+            padding: 0;
+            line-height: 1.5;
+        }
+
+        /* Screen Control Architecture */
+        .auth-container { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; box-sizing: border-box; }
+        .app-screen { display: none; max-width: 850px; margin: 0 auto; padding: 20px 20px 80px 20px; }
+        .hidden { display: none !important; }
+
+        /* Classy Modular Cards */
+        .card {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 480px;
+            box-sizing: border-box;
+            border-top: 6px solid var(--primary);
+        }
+
+        h2, h3, h4 { color: var(--primary); margin-top: 0; }
+        label { display: block; margin-top: 15px; font-weight: 600; font-size: 14px; }
+        
+        input, select {
+            width: 100%; padding: 12px; margin-top: 6px;
+            border: 1px solid #ccc; border-radius: 6px;
+            font-size: 15px; box-sizing: border-box; transition: all 0.3s;
+        }
+        input:focus, select:focus { border-color: var(--accent); outline: none; }
+
+        /* Auth Screen Navigation System Toggle */
+        .auth-toggle { display: flex; border-bottom: 2px solid #eee; margin-bottom: 20px; }
+        .auth-toggle button {
+            flex: 1; background: none; color: #777; border: none;
+            padding: 12px; font-size: 16px; font-weight: bold; cursor: pointer;
+        }
+        .auth-toggle button.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
+
+        /* Biometric & Gesture Interfaces */
+        .bio-btn {
+            background: #f1f5f9; color: var(--dark); border: 1px solid #cbd5e1;
+            padding: 10px; border-radius: 6px; display: flex; align-items: center;
+            justify-content: center; gap: 8px; font-size: 14px; font-weight: 600; margin-top: 10px; width: 100%; cursor: pointer;
+        }
+        .gesture-canvas-area {
+            background: #e2e8f0; height: 160px; border-radius: 6px; margin-top: 8px;
+            position: relative; display: flex; align-items: center; justify-content: center;
+            color: #64748b; font-size: 13px; font-weight: 500; border: 2px dashed #94a3b8; cursor: crosshair;
+        }
+
+        /* Dashboard Elements */
+        .welcome-card {
+            background: linear-gradient(135deg, #1b5e20, #388e3c); color: white;
+            padding: 25px; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 25px;
+        }
+        .welcome-card h2 { color: white; margin: 0; font-size: 24px; }
+        
+        .live-balance-box {
+            background: #263238; color: #00e676; padding: 20px;
+            border-radius: 8px; margin-top: 15px; text-align: center;
+        }
+        .live-balance-amount { font-family: monospace; font-size: 32px; font-weight: bold; }
+
+        .reminder-banner {
+            background-color: #fff3e0; color: #e65100; padding: 15px;
+            border-left: 5px solid #ff9800; border-radius: 6px; margin-bottom: 25px;
+            font-size: 14px; display: flex; justify-content: space-between; align-items: center;
+        }
+
+        /* Shared Single Farm Box Structure */
+        .shared-farm-box {
+            background: white; border-radius: var(--radius); padding: 25px;
+            box-shadow: var(--shadow); border: 1px solid #e0e0e0; margin-bottom: 25px;
+        }
+        .farm-switcher { display: flex; gap: 10px; background: #eee; padding: 5px; border-radius: 8px; margin-bottom: 20px; }
+        .switch-option {
+            flex: 1; text-align: center; padding: 10px; font-weight: bold;
+            border-radius: 6px; cursor: pointer; color: #666; transition: background 0.2s;
+        }
+        .switch-option.active { background: var(--primary); color: white; }
+
+        /* Global Notification Boxes */
+        .danger-box { background-color: var(--warning-bg); color: var(--warning-text); padding: 15px; border-left: 5px solid var(--warning-text); border-radius: 6px; font-weight: 600; font-size: 13px; margin-top: 15px; }
+        .secure-box { background-color: var(--primary-light); color: var(--primary-color); padding: 15px; border-left: 5px solid var(--accent); border-radius: 6px; font-size: 13px; margin-top: 15px; }
+
+        /* Active Contracts & Lock Modals */
+        .vault-card { background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0; margin-top: 15px; }
+        .countdown-ticker { font-family: monospace; background: #37474f; color: #ffca28; padding: 6px 12px; border-radius: 4px; display: inline-block; margin-top: 10px; font-size: 13px; font-weight: bold; }
+        
+        .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; z-index:2000; }
+        .modal-box { background: white; padding: 25px; border-radius: var(--radius); width: 90%; max-width: 380px; text-align: center; }
+
+        /* Safe Floating Chat UI */
+        .chat-widget { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
+        .chat-btn { background: var(--primary); color: white; width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .chat-box { display: none; width: 290px; background: white; border-radius: var(--radius); box-shadow: 0 5px 25px rgba(0,0,0,0.15); position: absolute; bottom: 65px; right: 0; overflow: hidden; border: 1px solid #e0e0e0; }
+        .chat-header { background: var(--primary); color: white; padding: 12px 15px; font-weight: bold; font-size: 14px; }
+        .chat-logs { height: 180px; padding: 12px; overflow-y: auto; font-size: 13px; background: #fafafa; }
+        .msg { margin-bottom: 10px; padding: 8px 12px; border-radius: 6px; max-width: 85%; font-size: 12px; }
+        .msg.bot { background: #e2f0d9; color: #2c5e1a; }
+        .msg.user { background: #e0e0e0; margin-left: auto; text-align: right; }
+        .chat-input-area { display: flex; border-top: 1px solid #eee; }
+        .chat-input-area input { border: none; padding: 10px; flex: 1; border-radius: 0; margin: 0; font-size: 13px; }
+        .chat-input-area button { width: auto; margin: 0; padding: 0 15px; border-radius: 0; background: var(--accent); font-size: 13px; color: white; }
+
+        /* Unified Global Actions buttons */
+        .submit-btn { width: 100%; background-color: var(--primary); color: var(--text-light); border: none; padding: 14px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; margin-top: 15px; color: white; transition: background 0.2s; }
+        .submit-btn:hover { background-color: #113f15; }
+    </style>
+</head>
+<body>
+
+    <!-- MASTER GATEWAY: LOGIN & SIGNUP COMBINED -->
+    <div id="authGateway" class="auth-container">
+        <div class="card">
+            <div class="auth-toggle">
+                <button id="toggleLoginTab" class="active" onclick="switchAuthTab('login')">Log In</button>
+                <button id="toggleRegisterTab" onclick="switchAuthTab('register')">Sign Up</button>
+            </div>
+
+            <!-- TAB A: SECURE LOGIN WINDOW -->
+            <div id="loginSection">
+                <h3>Welcome Back</h3>
+                <form onsubmit="executeLogin(event)">
+                    <label>Your Phone Number</label>
+                    <input type="tel" id="loginPhone" placeholder="Example: 0241234567" required>
+                    
+                    <label>Account Password</label>
+                    <input type="password" id="loginPass" placeholder="Enter your secret login password" required>
+                    
+                    <!-- Advanced Pattern Draw Password Segment -->
+                    <label>Draw Pattern Security (Optional)</label>
+                    <div class="gesture-canvas-area" onclick="alert('Picture-Draw registered securely!')">
+                        🖼️ Tap here to draw your unique locking pattern over your profile photo template
+                    </div>
+
+                    <button type="submit" class="submit-btn">Secure Log In</button>
+                </form>
+
+                <button class="bio-btn" onclick="triggerBiometrics()">
+                    👍 Tap to Authenticate with Fingerprint Scanner
+                </button>
+            </div>
+
+            <!-- TAB B: SECURE REGISTRATION WINDOW -->
+            <div id="registerSection" class="hidden">
+                <h3>Create Account</h3>
+                <form onsubmit="executeRegister(event)">
+                    <label>Full Name</label>
+                    <input type="text" id="regName" placeholder="Enter your first and last name" required>
+
+                    <label>Email Address</label>
+                    <input type="email" id="regEmail" placeholder="yourname@gmail.com" required>
+
+                    <label>Phone Number</label>
+                    <input type="tel" id="regPhone" placeholder="0241234567" required>
+
+                    <label>Select Your Region in Ghana</label>
+                    <select id="regRegion" required>
+                        <option value="">-- Choose Your Region --</option>
+                        <option value="Greater Accra">Greater Accra</option>
+                        <option value="Ashanti">Ashanti</option>
+                        <option value="Eastern">Eastern</option>
+                        <option value="Western">Western</option>
+                        <option value="Central">Central</option>
+                        <option value="Northern">Northern</option>
+                        <option value="Volta">Volta</option>
+                        <option value="Upper East">Upper East</option>
+                        <option value="Upper West">Upper West</option>
+                        <option value="Bono">Bono</option>
+                        <option value="Bono East">Bono East</option>
+                        <option value="Ahafo">Ahafo</option>
+                        <option value="Savannah">Savannah</option>
+                        <option value="North East">North East</option>
+                        <option value="Oti">Oti</option>
+                        <option value="Western North">Western North</option>
+                    </select>
+
+                    <label>Create Login Password</label>
+                    <input type="password" id="regPass" placeholder="Choose a safe secret password" required>
+
+                    <button type="submit" class="submit-btn">Send Email Verification Code</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- EMAIL VERIFICATION CODE SCREEN -->
+    <div id="verifyGateway" class="auth-container" style="display: none;">
+        <div class="card">
+            <h3>Confirm Email Code</h3>
+            <p style="font-size: 13px; color: #555;">We have sent a security code directly to your email address inbox.</p>
+            
+            <div class="secure-box" style="text-align: center; font-weight: bold; font-size: 15px;">
+                📬 Server Dispatch Token: <span style="color:#1b5e20;">9876</span>
+            </div>
+
+            <label style="text-align: center; margin-top: 15px;">Type Verification Code</label>
+            <input type="text" id="emailTokenInput" maxlength="4" style="text-align: center; font-size: 20px; letter-spacing: 6px;" placeholder="0000">
+            
+            <button class="submit-btn" onclick="confirmEmailToken()">Activate Dashboard</button>
+        </div>
+    </div>
+
+    <!-- MAIN CORE APPLICATION VIEW -->
+    <div id="appDashboard" class="app-screen">
+        
+        <!-- Persistent Passport Tracker Alert -->
+        <div id="passportUploaderBanner" class="reminder-banner">
+            <div><strong>⚠️ Missing Identification:</strong> Please select your passport picture to guarantee level-1 system status.</div>
+            <div><input type="file" accept="image/*" onchange="uploadPassportAction()"></div>
+        </div>
+
+        <!-- Personalized Welcome Header Panel -->
+        <div class="welcome-card">
+            <h2>Welcome back, <span id="dashInvestorName">Investor</span>! 🤝</h2>
+            <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">We are incredibly proud to grow together with you in automated farming production setups.</p>
+            
+            <!-- Continuous Dynamic Second Ticker Vault Balance -->
+            <div class="live-balance-box">
+                <div style="font-size: 12px; font-weight: bold; text-align: center; color: #cfd8dc; text-transform: uppercase; letter-spacing: 1px;">
+                    Active Working Capital Balance (GHS) 🚜
+                </div>
+                <div class="live-balance-amount">₵<span id="liveBalanceField">0.00000000</span></div>
+                <div style="font-size: 11px; color: #a7ffeb; font-style: italic; margin-top: 4px;">Balance updates continuously down to the millisecond</div>
+            </div>
+            <div id="dashRegTime" style="font-size:11px; margin-top: 15px; opacity: 0.8; text-align: right;">Registration Record: </div>
+        </div>
+
+        <!-- SHARED FARM SELECTION HOUSING BOX CONTAINER -->
+        <div class="shared-farm-box">
+            <h3>Select Production Package</h3>
+            <div class="farm-switcher">
+                <div id="switchPlantBtn" class="switch-option active" onclick="toggleSharedContent('plants')">🌱 Crop Plant Farms</div>
+                <div id="switchAnimalBtn" class="switch-option" onclick="toggleSharedContent('animals')">🐖 Livestock Animal Farms</div>
+            </div>
+
+            <!-- Single Compartment Window switching internal info instantly -->
+            <div id="sharedFarmDisplayArea">
+                <h4 id="farmPackageTitle" style="margin-bottom: 5px;">Plant Package Alpha</h4>
+                <p id="farmPackageDesc" style="font-size:13px; color:#555; margin-top:0;">Invest across modern high-grade industrial grain farms and long-cycle fields.</p>
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
+
+                <label>Investment Capital Amount (Minimum ₵100)</label>
+                <input type="number" id="farmInvestmentCapital" min="100" value="100" oninput="recalculateYieldEstimate()">
+
+                <label>Contract Expiry Timeline Length</label>
+                <select id="farmContractDuration" onchange="recalculateYieldEstimate()">
+                    <option value="1">1 Year Contract (12.5% Return)</option>
+                    <option value="2">2 Years Contract (25% Return)</option>
+                    <option value="3">3 Years Contract (37.5% Return)</option>
+                    <option value="4">4 Years Contract (50% Return)</option>
+                    <option value="5">5 Years Contract (62.5% Return)</option>
+                </select>
+
+                <div id="yieldCalculatorPreview" style="background:#f8f9fa; padding:12px; border-radius:6px; margin-top:15px; font-size:14px; font-weight:600; text-align:center; border: 1px solid #e2e8f0;">
+                    Yield Estimate Forecast: ₵112.50
+                </div>
+
+                <div class="danger-box">
+                    ⚠️ NOTICE: Once you finalize this transaction payment, the system logs it locks. Capital is completely non-refundable.
+                </div>
+
+                <!-- Hidden numbers trigger link form structure -->
+                <button class="submit-btn" style="background:#2e7d32;" onclick="launchSecurePaymentLink()">
+                    Secure Link Checkout & Invest
+                </button>
+            </div>
+        </div>
+
+        <!-- RECEIPT VAULT & PROGRESS TRACKERS -->
+        <h2>Active Contract Timers & Vouchers</h2>
+        <div id="activeContractsVault">
+            <p style="color:#777; font-style:italic;" id="emptyVaultPlaceholder">No active asset tracking clocks running right now.</p>
+        </div>
+    </div>
+
+    <!-- ENCRYPTED PDF RECEIPT ACCESS CONTROL POPUP MODAL -->
+    <div id="cryptoModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 style="margin-bottom: 10px;">🔐 Decrypt Document</h3>
+            <p style="font-size: 13px; color: #555; margin-bottom: 15px;">This certificate is password-protected. Please input the last 5 digits of your phone number to authorize decryption.</p>
+            <input type="password" id="cryptoKeyInput" maxlength="5" style="text-align:center; font-size:20px; letter-spacing:5px;" placeholder="•••••">
+            <button class="submit-btn" onclick="executeDocumentDecryption()">Unlock & View PDF</button>
+            <button class="submit-btn" style="background:#90a4ae; margin-top:8px;" onclick="closeCryptoModal()">Cancel</button>
+        </div>
+    </div>
+
+    <!-- SUPPORT CLIENT CONSOLE CHAT -->
+    <div class="chat-widget">
+        <div id="chatBox" class="chat-box">
+            <div class="chat-header">🌾 SikaFarm Support Desk</div>
+            <div id="chatLogs" class="chat-logs">
+                <div class="msg bot">Hello! Your logs are monitored securely. Drop your inquiry here. We are away from our desks right now, but your text is cached securely on our servers and we will reply as soon as work resumes!</div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chatInput" placeholder="Write question here...">
+                <button onclick="transmitChatMessage()">Send</button>
+            </div>
+        </div>
+        <div class="chat-btn" onclick="toggleChatDisplay()">💬</div>
+    </div>
+
+    <script>
+        // System Data Parameters
+        let sessionProfile = { currentBalance: 0, trackingRatePerSec: 0, phone: "0000000000" };
+        let activeSelectionType = 'plants';
+        const ANNUAL_INTEREST_RATE = 0.125; // Fixed 12.5% Rate
+
+        // 1. Authentication Screens Navigation
+        function switchAuthTab(targetTab) {
+            const loginBtn = document.getElementById('toggleLoginTab');
+            const regBtn = document.getElementById('toggleRegisterTab');
+            const loginSec = document.getElementById('loginSection');
+            const regSec = document.getElementById('registerSection');
+
+            if(targetTab === 'login') {
+                loginBtn.className = 'active'; regBtn.className = '';
+                loginSec.classList.remove('hidden'); regSec.classList.add('hidden');
+            } else {
+                regBtn.className = 'active'; loginBtn.className = '';
+                regSec.classList.remove('hidden'); loginSec.classList.add('hidden');
+            }
+        }
+
+        // 2. Mock Registration Pipeline Setup
+        function executeRegister(event) {
+            event.preventDefault();
+            sessionProfile.name = document.getElementById('regName').value;
+            sessionProfile.email = document.getElementById('regEmail').value;
+            sessionProfile.phone = document.getElementById('regPhone').value;
+            sessionProfile.region = document.getElementById('regRegion').value;
+
+            const stamp = new Date();
+            sessionProfile.regStamp = stamp.toLocaleDateString() + ' @ ' + stamp.toLocaleTimeString();
+
+            document.getElementById('authGateway').style.display = 'none';
+            document.getElementById('verifyGateway').style.display = 'flex';
+        }
+
+        // 3. Confirming Email Security Token
+        function confirmEmailToken() {
+            const code = document.getElementById('emailTokenInput').value;
+            if(code === "9876") {
+                bootAppSystemView();
+            } else {
+                alert("Invalid verification security code token! Try entering 9876.");
+            }
+        }
+
+        // 4. Fallback Static Account Login Bypass
+        function executeLogin(event) {
+            event.preventDefault();
+            sessionProfile.name = "Oduro Ampaw Emmanuel"; 
+            sessionProfile.phone = document.getElementById('loginPhone').value || "0555931805";
+            sessionProfile.region = "Greater Accra";
+            
+            const stamp = new Date();
+            sessionProfile.regStamp = stamp.toLocaleDateString() + ' @ ' + stamp.toLocaleTimeString();
+            
+            bootAppSystemView();
+        }
+
+        function triggerBiometrics() {
+            alert("Scanning biometric fingerprint index node reader...");
+            sessionProfile.name = "Annor Esther";
+            sessionProfile.phone = "0592632127";
+            sessionProfile.region = "Ashanti";
+            const stamp = new Date();
+            sessionProfile.regStamp = stamp.toLocaleDateString() + ' @ ' + stamp.toLocaleTimeString();
+            bootAppSystemView();
+        }
+
+        // 5. Initialize Full Application UI View state
+        function bootAppSystemView() {
+            document.getElementById('authGateway').style.display = 'none';
+            document.getElementById('verifyGateway').style.display = 'none';
+            document.getElementById('appDashboard').style.display = 'block';
+
+            document.getElementById('dashInvestorName').innerText = sessionProfile.name;
+            document.getElementById('dashRegTime').innerText = "Registration Log: " + sessionProfile.regStamp;
+            
+            // Turn on the live numerical ticking framework engine loop
+            runBalanceTickerEngine();
+        }
+
+        // 6. Handling Passport File Verification Alert Update
+        function uploadPassportAction() {
+            document.getElementById('passportUploaderBanner').style.display = 'none';
+            alert("Security status cleared! Your passport file reference has been appended to account systems.");
+        }
+
+        // 7. Tab Control Mechanism for Single Shared Form Compartment Box
+        function toggleSharedContent(type) {
+            activeSelectionType = type;
+            const plantBtn = document.getElementById('switchPlantBtn');
+            const animalBtn = document.getElementById('switchAnimalBtn');
+            const title = document.getElementById('farmPackageTitle');
+            const desc = document.getElementById('farmPackageDesc');
+
+            if(type === 'plants') {
+                plantBtn.className = 'switch-option active'; animalBtn.className = 'switch-option';
+                title.innerText = "Plant Package Alpha";
+                desc.innerText = "Invest across modern high-grade industrial grain farms and long-cycle cocoa fields.";
+            } else {
+                animalBtn.className = 'switch-option active'; plantBtn.className = 'switch-option';
+                title.innerText = "Livestock Package Beta";
+                desc.innerText = "Invest in modern poultry systems and sustainable livestock breeding operations.";
+            }
+            recalculateYieldEstimate();
+        }
+
+        // 8. Calculating Floating Returns Live Indicators
+        function recalculateYieldEstimate() {
+            const capital = parseFloat(document.getElementById('farmInvestmentCapital').value) || 0;
+            const years = parseInt(document.getElementById('farmContractDuration').value);
+            
+            const calculation = capital + (capital * ANNUAL_INTEREST_RATE * years);
+            document.getElementById('yieldCalculatorPreview').innerText = `Yield Estimate Forecast: ₵${calculation.toFixed(2)}`;
+        }
+
+        // 9. Payment Redirect Gateway Link trigger masking internal variables
+        function launchSecurePaymentLink() {
+            const capitalInput = parseFloat(document.getElementById('farmInvestmentCapital').value);
+            const years = parseInt(document.getElementById('farmContractDuration').value);
+
+            // Validation logic enforcement matching minimum parameters
+            if(isNaN(capitalInput) || capitalInput < 100) {
+                alert("Transaction Blocked: The minimum amount required to enter an active agricultural investment is ₵100.00 or above.");
+                return;
+            }
+
+            const promptDecision = confirm(`Launch secure network processing link window for ₵${capitalInput.toFixed(2)}? Capital assets will drop to active farm work status and become completely non-refundable.`);
+            if(!promptDecision) return;
+
+            // Remove placeholder warning message safely
+            const msgNode = document.getElementById('emptyVaultMsg');
+            if(msgNode) msgNode.remove();
+            document.getElementById('emptyVaultPlaceholder').className = 'hidden';
+
+            // Calculate the internal second increment weight rate coefficient parameter
+            const earningsTotalOverTerm = capitalInput * ANNUAL_INTEREST_RATE * years;
+            const absoluteSecondsTotal = years * 365 * 24 * 60 * 60;
+            
+            // Add investment capital value directly onto user profile base tracking accumulation metrics
+            sessionProfile.currentBalance += capitalInput;
+            sessionProfile.trackingRatePerSec += (earningsTotalOverTerm / absoluteSecondsTotal);
+
+            // Append contract tracking visual clock timeline blocks directly inside active container
+            const targetTime = new Date().getTime() + (years * 365 * 24 * 60 * 60 * 1000);
+            const trackingElementId = 'clock_' + Date.now();
+
+            const targetVault = document.getElementById('activeContractsVault');
+            const cardMarkup = `
+                <div class="vault-card">
+                    <h4 style="margin:0; color:#2e7d32;">${activeSelectionType === 'plants' ? 'Plant Contract Alpha' : 'Livestock Contract Beta'}</h4>
+                    <p style="font-size:13px; margin:4px 0;">Principal Invested Capital: <strong>₵${capitalInput.toFixed(2)} GHS</strong></p>
+                    <div style="font-size:12px; color:#555;">📁 Encrypted Record File: <span style="color:var(--primary); font-weight:bold; cursor:pointer; text-decoration:underline;" onclick="openCryptoDecryptionPortal()">Download_Receipt_Voucher.pdf</span></div>
+                    <div class="countdown-ticker" id="${trackingElementId}">Initializing Secure Ticker Connection...</div>
+                </div>
+            `;
+            targetVault.insertAdjacentHTML('beforeend', cardMarkup);
+
+            // Initialize active ticker execution loop
+            setInterval(() => {
+                const clockElem = document.getElementById(trackingElementId);
+                if(!clockElem) return;
+
+                const distance = targetTime - new Date().getTime();
+                if(distance < 0) {
+                    clockElem.innerText = "CONTRACT EXPIRED - MATURED ACCOUNT OUTFLOW COMPLETED";
+                    return;
+                }
+
+                const d = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const s = Math.floor((distance % (1000 * 60)) / 1000);
+
+                clockElem.innerText = `${d}d : ${h}h : ${m}m : ${s}s Remaining Until Maturity`;
+            }, 1000);
+
+            // Reset dynamic fields back down to initial minimum baseline values
+            document.getElementById('farmInvestmentCapital').value = 100;
+            recalculateYieldEstimate();
+        }
+
+        // 10. The Mathematical Continuous Accumulation Balance Ticker Engine
+        function runBalanceTickerEngine() {
+            setInterval(() => {
+                // Increment internal user balance metric calculation by fractional growth variables
+                sessionProfile.currentBalance += (sessionProfile.trackingRatePerSec / 10);
+                document.getElementById('liveBalanceField').innerText = sessionProfile.currentBalance.toFixed(8);
+            }, 100);
+        }
+
+        // 11. Modal Window Password Control Core
+        function openCryptoDecryptionPortal() {
+            document.getElementById('cryptoModal').style.display = 'flex';
+        }
+        function closeCryptoModal() {
+            document.getElementById('cryptoModal').style.display = 'none';
+            document.getElementById('cryptoKeyInput').value = '';
+        }
+        function executeDocumentDecryption() {
+            const typedKey = document.getElementById('cryptoKeyInput').value;
+            const validationMatch = sessionProfile.phone.slice(-5);
+
+            if(typedKey === validationMatch) {
+                alert("Authorization verified! Opening decrypted PDF statement document profile tracking overview voucher.");
+                closeCryptoModal();
+            } else {
+                alert(`Security Access Refused: The input code did not match the encryption key file parameters.`);
+            }
+        }
+
+        // 12. Support Dialogue Queue Window Actions
+        function toggleChatDisplay() {
+            const uiBox = document.getElementById('chatBox');
+            uiBox.style.display = uiBox.style.display === 'block' ? 'none' : 'block';
+        }
+        function transmitChatMessage() {
+            const area = document.getElementById('chatInput');
+            const msgText = area.value.trim();
+            if(!msgText) return;
+
+            const logs = document.getElementById('chatLogs');
+            const node = document.createElement('div');
+            node.className = 'msg user'; node.innerText = msgText;
+            logs.appendChild(node);
+            
+            area.value = ''; logs.scrollTop = logs.scrollHeight;
+
+            setTimeout(() => {
+                const responseNode = document.createElement('div');
+                responseNode.className = 'msg bot';
+                responseNode.innerText = "Systems Alert: Message packets have successfully loaded into our offline database stack. Our service operators will process this transcript directly when office hours begin.";
+                logs.appendChild(responseNode);
+                logs.scrollTop = logs.scrollHeight;
+            }, 1200);
+        }
+    </script>
+</body>
+</html>
